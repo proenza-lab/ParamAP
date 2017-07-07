@@ -5,7 +5,7 @@
 
 ParamAP is a standalone computational tool that uses a template-free detection algorithm to automatically identify and parameterize sinoatrial myocyte action potentials.  ParamAP is written in Python 3 and it can be run on Windows, Mac OS X, or Ubuntu operating systems.  It employs a graphic user interface with automatic and user-editable input modes.  ParamAP accepts text input files and returns a total of 16 AP waveform parameters as text and graphical outputs. The software is available under the [GNU General Public License 2](https://github.com/crickert1234/ParamAP/blob/master/LICENSE).
 
-![Screenshot of a parameterization summary](https://github.com/crickert1234/ParamAP/img/ParamAP-Screenshot.png)
+![Screenshot of a parameterization summary](https://github.com/crickert1234/ParamAP/blob/master/img/ParamAP-Screenshot.png)
 
 ## Hardware requirements
 ParamAP can be run on any computer for which [Python 3](https://www.python.org/downloads/) and the libraries [NumPy](https://www.scipy.org/scipylib/download.html), [SciPy](https://www.scipy.org/install.html), and [Matplotlib](https://matplotlib.org/users/installing.html) are available, which includes most common processor architectures and operating systems (Mac OS X, Linux/Ubuntu, Windows).  The minimum system requirements are very modest (~ 2 GB system memory, 1 GHz processor frequency,  and at least 1 GB of free disk space).  As a general rule, the minimum memory required is approximately ten times the largest file size to be analyzed, which depends on the data sampling rate and the length of the recording to be read.
