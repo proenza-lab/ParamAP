@@ -23,7 +23,7 @@ The latest versions of ParamAP can be found on the repository's [releases](https
 ## Installation & Usage
 Please consult the [User Manual](https://github.com/crickert1234/ParamAP/releases/download/v1.0.1/ParamAP-1.0-Manual.pdf) for information on how to install and use ParamAP.
 
-## Development & Bug reports
+## Development & Bug reporting
 If you would like to participate in the development of ParamAP, please [fork this repository](https://help.github.com/articles/fork-a-repo) to your GitHub account. In order to report a problem with ParamAP, please login to your GitHub account and create a [new issue](https://help.github.com/articles/creating-an-issue/) in this repository.
 
 Your feedback is welcome! Please contact us using [GitHub](https://github.com/crickert1234/) or via [e-mail](mailto:Christian.Rickert@ucdenver.edu).
