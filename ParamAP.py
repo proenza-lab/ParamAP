@@ -3,7 +3,7 @@
 
 '''
 ParamAP.py (parametrization of sinoatrial myocyte action potentials)
-Copyright (C) 2017 Christian Rickert <christian.rickert@ucdenver.edu>
+Copyright (C) 2018 Christian Rickert <christian.rickert@ucdenver.edu>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -68,6 +68,18 @@ def askboolean(dlabel="custom boolean", dval=True):
             print("False\n")
             return False  # break
         else:
+            continue
+
+
+def askext(dlabel="custom extension", dext='atf'):
+    """Returns a file extention provided by the user."""
+    while True:
+        uext = str(input("Enter " + dlabel + " [" + dext + "]: ")).lower() or dext
+        if uext not in ["dat", "log", "pdf"] and len(uext) == 3:
+            print(uext + "\n")
+            return uext  # break
+        else:
+            print("Invalid file extension!\n")
             continue
 
 
@@ -191,35 +203,40 @@ def mpp_setup(title='Plot title', xlabel='Time [ ]', ylabel='Voltage [ ]'):
 
 def readfile(inputfile='name'):
     """Extracts the xy pairs from an ASCII raw file and stores its values into a numpy array."""
+    defux = ["ms", "s"]
+    defuy = ["mV", "V"]
     inpunits = False
-    with open(inputfile, 'r') as headerfile:
-        line = 1  # header line
+    with open(inputfile, 'r') as datafile:
+        line = 1
+        inpuxy = []  # header might be missing
         while line <= 25:  # arbitrary Clampfit header limit for ATF
-            tmp_header = headerfile.readline()
-            if tmp_header.startswith("\""):
+            headerline = datafile.readline()
+            if headerline.startswith("\""):
+                inpuxy = str(headerline).split()  # last line of header contains units
                 skipline = line
-                lastline = tmp_header
+            if not inpuxy:
+                skipline = 0
             line += 1
-        lastline = str(lastline).split()  # contains units
         try:
-            inpx = lastline[1][1:-2]
-            inpy = lastline[4][1:-2]
+            inpux = inpuxy[1][1:-2]
+            inpuy = inpuxy[4][1:-2]
         except IndexError:  # missing header
-            inpx, inpy = "", ""
+            inpux, inpuy = str(defux)[1:-1], str(defuy)[1:-1]
         else:  # header found
-            if inpx in ["ms", "s"] and inpy in ["mV", "V"]:
+            if inpux in defux and inpuy in defuy:
                 inpunits = True
-        inp_xy = np.loadtxt(inputfile, dtype='float64', delimiter='\t', skiprows=skipline, unpack=True)  # slower than np.genfromtxt or native python, but uses less main memory at peak
-        return inp_xy, inpunits, inpx, inpy
+        datafile.seek(0)  # reset the file index to the first byte
+        inp_xy = np.loadtxt(datafile, dtype='float64', delimiter='\t', skiprows=skipline, unpack=True)  # slower than np.genfromtxt or native python, but uses less main memory at peak
+        return inp_xy, inpunits, inpux, inpuy
 
 
 # main routine
 
-AUTHOR = "Copyright (C) 2017 Christian Rickert"
+AUTHOR = "Copyright (C) 2018 Christian Rickert"
 SEPARBOLD = 79*'='
 SEPARNORM = 79*'-'
 SOFTWARE = "ParamAP"
-VERSION = "version 1.0,"  # (2017-07-06)
+VERSION = "version 1.1,"  # (2018-03-10)
 WORKDIR = SOFTWARE  # working directory for parameterization
 print('{0:^79}'.format(SEPARBOLD) + os.linesep)
 GREETER = '{0:<{w0}}{1:<{w1}}{2:<{w2}}'.format(SOFTWARE, VERSION, AUTHOR, w0=len(SOFTWARE)+1, w1=len(VERSION)+1, w2=len(AUTHOR)+1)
@@ -246,10 +263,13 @@ print('{0:^79}'.format(SEPARNORM))
 WORKPATH = os.path.abspath(WORKDIR)
 if not os.path.exists(WORKPATH):
     os.mkdir(WORKPATH)
-print("FOLDER:\t" + WORKPATH)
+print("FOLDER:\t" + WORKPATH + "\n")
 
 FILE = 0  # file
-ATFFILES = getfiles(path=WORKDIR, pattern='*.atf')
+EXTENSION = askext(dlabel="custom file type", dext='atf')  # file extension used to filter files in working directory
+if SERIES:
+    AVG_FRAME = askvalue(dlabel="analysis frame time", dval=5000.0, dunit=' ms')  # time interval for series analysis (ms)
+ATFFILES = getfiles(path=WORKDIR, pattern=("*." + EXTENSION))
 for ATFFILE in ATFFILES:  # iterate through files
     name = os.path.splitext(os.path.split(ATFFILE)[1])[0]
     print('{0:^79}'.format(SEPARNORM))
@@ -259,7 +279,6 @@ for ATFFILE in ATFFILES:  # iterate through files
     ap_hwd = 250.0  # maximum acceptable ap half width (ms)
     ap_max = 50.0  # maximum acceptable ap value (mV)
     ap_min = -10.0  # minimum acceptable ap value (mV)
-    avg_frame = 5000.0  # time interval for series analysis (ms)
     mdp_max = -50.0  # maximum acceptable mdp value (mV)
     mdp_min = -90.0  # minimum acceptable mdp value (mV)
     wm_der = 1.0  # window multiplier for derivative filtering
@@ -293,11 +312,11 @@ for ATFFILE in ATFFILES:  # iterate through files
     sys.stdout.flush()
 
     while True:  # repeat data analysis for current file
-        try:
-            startpdf = True  # overwrite existing file
-            segment = 0.0
-            while True:  # time series analysis
+        startpdf = True  # overwrite existing file
+        segment = 0.0
+        while True:  # time series analysis
 
+            try:
                 # create raw data plot
                 sys.stdout.write(">> PLOTTING... ")
                 sys.stdout.flush()
@@ -305,7 +324,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                 mpp.plot(raw_x, raw_y, '0.75')  # raw data (grey line)
 
                 if startpdf:
-                    pdf_file = mpbp.PdfPages(os.path.join(WORKDIR, name + ".pdf"))  # multi-pdf file
+                    pdf_file = mpbp.PdfPages(os.path.join(WORKDIR, name + ".pdf"), keep_empty=False)  # multi-pdf file
                     startpdf = False   # append existing file
                 mpp.tight_layout()  # avoid label overlaps
 
@@ -326,8 +345,6 @@ for ATFFILE in ATFFILES:  # iterate through files
                     if segment == 0.0:  # initialize values
                         avg_start = askvalue(dlabel="analysis start time", dval=avg_start, dunit=' ms')
                         avg_stop = askvalue(dlabel="analysis stop time", dval=avg_stop, dunit=' ms')
-                        if SERIES:
-                            avg_frame = askvalue(dlabel="analysis frame time", dval=avg_frame, dunit=' ms')
                     ap_max = askvalue(dlabel="upper limit for maxima", dval=ap_max, dunit=' mV')
                     ap_min = askvalue(dlabel="lower limit for maxima", dval=ap_min, dunit=' mV')
                     mdp_max = askvalue(dlabel="upper limit for minima", dval=mdp_max, dunit=' mV')
@@ -342,8 +359,8 @@ for ATFFILE in ATFFILES:  # iterate through files
                 mpp.clf()  # clear canvas
 
                 if segment == 0.0:  # set first frame
-                    tmp_start = avg_start + (segment*avg_frame if SERIES else 0.0)
-                    tmp_stop = (tmp_start + avg_frame) if SERIES else avg_stop
+                    tmp_start = avg_start + (segment*AVG_FRAME if SERIES else 0.0)
+                    tmp_stop = (tmp_start + AVG_FRAME) if SERIES else avg_stop
                     raw_i = np.argwhere((RAW_XY[0] >= tmp_start) & (RAW_XY[0] <= tmp_stop)).ravel()
                     raw_x = RAW_XY[0][raw_i[0]:raw_i[-1]+1]
                     raw_y = RAW_XY[1][raw_i[0]:raw_i[-1]+1]
@@ -567,7 +584,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                         else:  # all other averages
                             i = 0  # array index
                             nw = (1.0/(n+1.0))  # new data weight
-                            pw = (1.0-nw)  # previous data weight
+                            pw = (n/(n+1.0))  # previous data weight
                             for y in np.nditer(avg_y, op_flags=['readwrite']):
                                 y[...] = pw*y + nw*tmp_y[i]  # integrate raw data into averaged data
                                 i += 1
@@ -757,16 +774,16 @@ for ATFFILE in ATFFILES:  # iterate through files
                     # data summary
                     sys.stdout.write(">> SAVING... ")
                     sys.stdout.flush()
-                    avg_file = os.path.join(WORKDIR, name + "_" + timestamp + "_avg.txt")
+                    avg_file = os.path.join(WORKDIR, name + "_" + timestamp + "_avg.dat")
                     uheader = "" +\
-                        "Analysis start time: " + 3*"\t" + str(tmp_start) + " ms\n" + \
-                        "Analysis stop time:" + 3*"\t" + str(tmp_stop) + " ms\n" + \
-                        "Upper limit for maxima:" + 2*"\t" + str(ap_max) + " mV\n" + \
-                        "Lower limit for maxima:" + 2*"\t" + str(ap_min) + " mV\n" + \
-                        "Upper limit for minima:" + 2*"\t" + str(mdp_max) + " mV\n" + \
-                        "Lower limit for minima:" + 2*"\t" + str(mdp_min) + " mV\n" + \
-                        "Maximum peak half width:" + 2*"\t" + str(ap_hwd) + " ms\n" + \
-                        "Minimum peak amplitude:" + 2*"\t" + str(ap_amp) + " mV\n" + \
+                        "Analysis start time: " + 4*"\t" + str(tmp_start) + " ms\n" + \
+                        "Analysis stop time:" + 4*"\t" + str(tmp_stop) + " ms\n" + \
+                        "Upper limit for maxima:" + 3*"\t" + str(ap_max) + " mV\n" + \
+                        "Lower limit for maxima:" + 3*"\t" + str(ap_min) + " mV\n" + \
+                        "Upper limit for minima:" + 3*"\t" + str(mdp_max) + " mV\n" + \
+                        "Lower limit for minima:" + 3*"\t" + str(mdp_min) + " mV\n" + \
+                        "Maximum peak half width:" + 3*"\t" + str(ap_hwd) + " ms\n" + \
+                        "Minimum peak amplitude:" + 3*"\t" + str(ap_amp) + " mV\n" + \
                         "Running average window size:" + 2*"\t" + str(runavg) + "\n" + \
                         "Window multiplier for derivative:" + "\t" + str(wm_der) + "\n" + \
                         "Window multiplier for maxima:" + 2*"\t" + str(wm_max) + "\n" + \
@@ -775,7 +792,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     np.savetxt(avg_file, np.column_stack((avg_x, avg_y, avgf_y)), fmt='%e', delimiter='\t', header=uheader)
                     mpp.tight_layout()
                     mpp.savefig(pdf_file, format='pdf', dpi=600)
-                    sum_file = os.path.join(WORKDIR, "ParamAP.txt")
+                    sum_file = os.path.join(WORKDIR, "ParamAP.log")
                     newfile = not bool(os.path.exists(sum_file))
                     with open(sum_file, 'a') as targetfile:  # append file
                         if newfile:  # write header
@@ -791,69 +808,58 @@ for ATFFILE in ATFFILES:  # iterate through files
                     if not AUTORUN:
                         mpp.show()
 
-                if SERIES:  # check for next frame
-                    if tmp_stop + avg_frame <= avg_stop:
-                        segment += 1.0
-                        tmp_start = avg_start + (segment*avg_frame if SERIES else 0.0)  # prepare next frame for preview
-                        tmp_stop = (tmp_start + avg_frame) if SERIES else avg_stop
-                        raw_i = np.argwhere((RAW_XY[0] >= tmp_start) & (RAW_XY[0] <= tmp_stop)).ravel()
-                        raw_x = RAW_XY[0][raw_i[0]:raw_i[-1]+1]
-                        raw_y = RAW_XY[1][raw_i[0]:raw_i[-1]+1]
-                        print()
-                        print("RUN:\t" + str(int(segment + 1)) + "/" + str(math.floor((avg_stop-avg_start)/avg_frame)))
-                        print()
-                        continue
-                    else:  # not enough data left in file
-                        break
-                else:  # no time series analysis
+            except IndexError as ierr:  # check running average and window multiplier
+                sys.stdout.write("\n" + 9*"\t" + "   [ER]")
+                print("\r   ## Run failed. Detection of extrema or threshold failed.")
+            except PermissionError as perr:  # file already opened or storage read-only
+                sys.stdout.write("\n" + 9*"\t" + "   [ER]")
+                print("\r   ## Run failed. File access denied by system.")
+            except Warning as werr:  # increase averaging window time
+                sys.stdout.write("\n" + 9*"\t" + "   [ER]")
+                print("\r   ## Run failed. Identification of action potentials failed.")
+            except Exception as uerr:  # unknown
+                sys.stdout.write("\n" + 9*"\t" + "   [UN]")
+                print("\r   ## Run failed. Error was: {0}".format(uerr) + ".")
+            except KeyboardInterrupt as kerr:  # user canceled this file
+                sys.stdout.write("\n" + 9*"\t" + "   [KO]")
+                print("\r   ## Run skipped. Canceled by user.")
+            if SERIES:  # check for next frame
+                if tmp_stop + AVG_FRAME <= avg_stop:
+                    segment += 1.0
+                    tmp_start = avg_start + segment*AVG_FRAME  # prepare next frame for preview
+                    tmp_stop = tmp_start + AVG_FRAME
+                    raw_i = np.argwhere((RAW_XY[0] >= tmp_start) & (RAW_XY[0] <= tmp_stop)).ravel()
+                    raw_x = RAW_XY[0][raw_i[0]:raw_i[-1]+1]
+                    raw_y = RAW_XY[1][raw_i[0]:raw_i[-1]+1]
+                    print()
+                    print("RUN:\t" + str(int(segment + 1)) + "/" + str(math.floor((avg_stop-avg_start)/AVG_FRAME)))
+                    print()
+                else:  # not enough data left in file
                     break
-
-            if not AUTORUN:  # check for next file
-                print()
-                nextfile = askboolean("Continue with next file?", True)
-                if nextfile:
-                    break
-                else:  # re-run current file
-                    raw_x = RAW_XY[0]  # recover original rawdata
-                    raw_y = RAW_XY[1]
-                    continue
-            else:  # autorun
+            else:  # no time series analysis
                 break
 
-        except IndexError as ierr:  # check running average and window multiplier
-            sys.stdout.write("\n" + 9*"\t" + "   [ER]")
-            print("\r   ## Run failed. Detection of extrema or threshold failed.")
-            if not AUTORUN:
+        if not AUTORUN:  # check for next file
+            print()
+            nextfile = askboolean("Continue with next file?", True)
+            if nextfile:
+                break
+            else:  # re-run current file
+                raw_x = RAW_XY[0]  # recover original rawdata
+                raw_y = RAW_XY[1]
                 continue
-        except PermissionError as perr:  # file already opened or storage read-only
-            sys.stdout.write("\n" + 9*"\t" + "   [ER]")
-            print("\r   ## Run failed. File access denied by system.")
-            if not AUTORUN:
-                continue
-        except Warning as werr:  # increase averaging window time
-            sys.stdout.write("\n" + 9*"\t" + "   [ER]")
-            print("\r   ## Run failed. Identification of action potentials failed.")
-            if not AUTORUN:
-                continue
-        except Exception as uerr:  # unknown
-            sys.stdout.write("\n" + 9*"\t" + "   [UN]")
-            print("\r   ## Run failed. Error was: {0}".format(uerr) + ".")
-            if not AUTORUN:
-                continue
-        except KeyboardInterrupt as kerr:  # user canceled this file
-            sys.stdout.write("\n" + 9*"\t" + "   [KO]")
-            print("\r   ## Run skipped. Canceled by user.")
+        else:  # autorun
             break
-        finally:  # both with or without exception
-            # clear memory and canvas
-            FILE += 1
-            sys.stdout.write(">> CLEANING... ")
-            sys.stdout.flush()
-            pdf_file.close()  # close multi-pdf file
-            mpp.clf()
-            gc.collect()  # start garbage collection to prevent memory fragmentation
-            sys.stdout.write(8*"\t" + "   [OK]\n")
-            sys.stdout.flush()
+
+    # housekeeping after each file
+    FILE += 1
+    sys.stdout.write(">> CLEANING... ")
+    sys.stdout.flush()
+    pdf_file.close()  # close multi-pdf file and remove if empty
+    mpp.clf()  # clear canvas
+    gc.collect()  # start garbage collection to prevent memory fragmentation
+    sys.stdout.write(8*"\t" + "   [OK]\n")
+    sys.stdout.flush()
 
 # print summary
 print('{0:^79}'.format(SEPARBOLD))
