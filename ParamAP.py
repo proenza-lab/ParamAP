@@ -3,7 +3,7 @@
 
 '''
 ParamAP.py (parametrization of sinoatrial myocyte action potentials)
-Copyright (C) 2018 Christian Rickert <christian.rickert@ucdenver.edu>
+Copyright (C) 2019 Christian Rickert <christian.rickert@ucdenver.edu>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -232,11 +232,11 @@ def readfile(inputfile='name'):
 
 # main routine
 
-AUTHOR = "Copyright (C) 2018 Christian Rickert"
+AUTHOR = "Copyright (C) 2019 Christian Rickert"
 SEPARBOLD = 79*'='
 SEPARNORM = 79*'-'
 SOFTWARE = "ParamAP"
-VERSION = "version 1.1,"  # (2018-03-10)
+VERSION = "version 1.2,"  # (2019-02-11)
 WORKDIR = SOFTWARE  # working directory for parameterization
 print('{0:^79}'.format(SEPARBOLD) + os.linesep)
 GREETER = '{0:<{w0}}{1:<{w1}}{2:<{w2}}'.format(SOFTWARE, VERSION, AUTHOR, w0=len(SOFTWARE)+1, w1=len(VERSION)+1, w2=len(AUTHOR)+1)
@@ -443,7 +443,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     rawfmin_y = rawfmin_y[rawfmin_ii].ravel()
                     rawfmin_std = np.std(rawfmin_y, ddof=1)
                     mdp_max = np.mean(rawfmin_y) + 4.0 * rawfmin_std
-                    mdp_min = np.mean(rawfmin_y) - 4.0 *rawfmin_std
+                    mdp_min = np.mean(rawfmin_y) - 4.0 * rawfmin_std
                     rawfmin_ii = functools.reduce(np.intersect1d, (rawfmin_iii, np.argwhere(rawf_y >= mdp_min), np.argwhere(rawf_y <= mdp_max)))
                     rawfmin_x = raw_x[rawfmin_ii]
                     rawfmin_y = rawf_y[rawfmin_ii]
@@ -540,9 +540,9 @@ for ATFFILE in ATFFILES:  # iterate through files
                 mpp.plot([rawfmin_x[0], rawfmin_x[-1]], [rawfmin_m, rawfmin_m], 'k')  # average of minima (black line)
                 mpp.plot(raw_x[rawfmax_ii], rawf_y[rawfmax_ii], 'bo')  # maxima (blue dots)
                 mpp.plot(raw_x[rawfmin_ii], rawf_y[rawfmin_ii], 'go')  # minima (green dots)
-                mpp.figtext(0.12, 0.90, "{0:<s} {1:<.4G}".format("AVGMAX (mV):", rawfmax_m), ha='left', va='center')
-                mpp.figtext(0.12, 0.87, "{0:<s} {1:<.4G}".format("FR (AP/min):", frate), ha='left', va='center')
-                mpp.figtext(0.12, 0.84, "{0:<s} {1:<.4G}".format("AVGMIN (mV):", rawfmin_m), ha='left', va='center')
+                mpp.figtext(0.12, 0.91, "{0:<s} {1:<.4G}".format("AVGMAX (mV):", rawfmax_m), ha='left', va='center')
+                mpp.figtext(0.12, 0.88, "{0:<s} {1:<.4G}".format("FR (AP/min):", frate), ha='left', va='center')
+                mpp.figtext(0.12, 0.85, "{0:<s} {1:<.4G}".format("AVGMIN (mV):", rawfmin_m), ha='left', va='center')
                 mpp.tight_layout()
                 sys.stdout.write(8*"\t" + "   [OK]\n")
                 sys.stdout.flush()
@@ -602,10 +602,10 @@ for ATFFILE in ATFFILES:  # iterate through files
 
                     # detect "Peak potential: Maximum potential of AP" (PP) (mV)
                     avgfmax_i = np.argwhere(avg_x == 0.0)  # data point for maximum centered
-                    if not avgfmax_i:  # data point for maximum left or right of center
+                    if not avgfmax_i.size > 0:  # data point for maximum left or right of center
                         tmpavg = int(round(wm_max*runavg)) if int(round(wm_max*runavg)) % 2 else int(round(wm_max*runavg))+1
                         avgfmax_ii = np.asarray(sp_sig.argrelmax(avgf_y, order=tmpavg)).ravel()  # find all maxima
-                        avgfmax_i = avgfmax_ii[np.argmin(np.abs(avg_x[avgfmax_ii] - 0.0))]  # return the maximum closes to X = 0.0
+                        avgfmax_i = avgfmax_ii[np.argmin(np.abs(avg_x[avgfmax_ii] - 0.0))]  # return the maximum closest to X = 0.0
                     avgfmax_x = avg_x[avgfmax_i]
                     avgfmax_y = avgf_y[avgfmax_i]
                     pp_y = float(avgfmax_y)
@@ -635,6 +635,13 @@ for ATFFILE in ATFFILES:  # iterate through files
 
                     # determine "Action potential amplitude: Potential difference of PP minus MDP2" (APA) (mV)
                     apa = pp - mdp2
+
+                    # determine "AP duration 30: Time interval at 30% of maximum repolarization" (APD30) (ms)
+                    apd30_l = (pp - 0.30*apa)  # threshold value
+                    apd30_i = functools.reduce(np.intersect1d, (np.argwhere(avgf_y > apd30_l), np.argwhere(avg_x >= mdp1_x), np.argwhere(avg_x <= mdp2_x)))
+                    apd30_x = (avg_x[apd30_i[0]-1], avg_x[apd30_i[-1]+1])  # equal or smaller than apd30_l
+                    apd30_y = (avgf_y[apd30_i[0]-1], avgf_y[apd30_i[-1]+1])
+                    apd30 = float(apd30_x[-1] - apd30_x[0])
 
                     # determine "AP duration 50: Time interval at 50% of maximum repolarization" (APD50) (ms)
                     apd50_l = (pp - 0.50*apa)  # threshold value
@@ -713,6 +720,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     sys.stdout.flush()
                     mpp.plot([mdp1_x, thr_x], [mdp1_y, mdp1_y], 'k-.')  # DD (black dashed/dotted line)
                     mpp.plot([thr_x, mdp2_x], [mdp2_y, mdp2_y], 'k')  # APD (black line)
+                    mpp.plot([apd30_x[0], apd30_x[1]], [apd30_y[1], apd30_y[1]], 'k')  # APD30 (black line)
                     mpp.plot([apd50_x[0], apd50_x[1]], [apd50_y[1], apd50_y[1]], 'k')  # APD50 (black line)
                     mpp.plot([apd90_x[0], apd90_x[1]], [apd90_y[1], apd90_y[1]], 'k')  # APD90 (black line)
                     mpp.plot([mdp1_x, mdp1_x], [mdp1_y, 0.0], 'k:')  # MDP1 indicator (black dotted line)
@@ -728,6 +736,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp.plot(avg_x[edd_i], avgf_y[edd_i], 'g')  # best linear fit segment for DDR (green line)
                     mpp.plot(avg_x, (edd_m*avg_x + edd_n), 'k--')  # DDR (black dashed line)
                     mpp.plot([edd_x[-1]], [edd_y[-1]], 'ko')  # EDD-LDD separator (black dot)
+                    mpp.plot([apd30_x[1]], [apd30_y[1]], 'ko')  # APD30 (black dots)
                     mpp.plot([apd50_x[1]], [apd50_y[1]], 'ko')  # APD50 (black dots)
                     mpp.plot(apd90_x[1], apd90_y[1], 'ko')  # APD90 (black dots)
                     mpp.plot(thr_x, avgf_y[thr_i], 'ro')  # THR (red dot)
@@ -737,24 +746,25 @@ for ATFFILE in ATFFILES:  # iterate through files
                         mpp.plot(avgfgfmin_x[1], avgf_y[avgfgfmin_i[1]], 'wo')  # TRR (dot)
                     mpp.plot(avgfmax_x, pp_y, 'bo')  # PP (blue dot)
                     mpp.plot(avgfmin_x, avgfmin_y, 'go')  # MDP1, MDP2 (green dots)
-                    mpp.figtext(0.12, 0.90, "{0:<s} {1:<.4G}".format("APs (#):", rawfmax_y.size), ha='left', va='center')
-                    mpp.figtext(0.12, 0.87, "{0:<s} {1:<.4G}".format("FR (AP/min):", frate), ha='left', va='center')
-                    mpp.figtext(0.12, 0.84, "{0:<s} {1:<.4G}".format("CL (ms):", cl), ha='left', va='center')
-                    mpp.figtext(0.12, 0.81, "{0:<s} {1:<.4G}".format("DD (ms):", dd), ha='left', va='center')
-                    mpp.figtext(0.12, 0.78, "{0:<s} {1:<.4G}".format("EDD (ms):", edd), ha='left', va='center')
-                    mpp.figtext(0.12, 0.75, "{0:<s} {1:<.4G}".format("LDD (ms):", ldd), ha='left', va='center')
-                    mpp.figtext(0.12, 0.72, "{0:<s} {1:<.4G}".format("APD (ms):", apd), ha='left', va='center')
-                    mpp.figtext(0.12, 0.69, "{0:<s} {1:<.4G}".format("APD50 (ms):", apd50), ha='left', va='center')
-                    mpp.figtext(0.12, 0.66, "{0:<s} {1:<.4G}".format("APD90 (ms):", apd90), ha='left', va='center')
-                    mpp.figtext(0.12, 0.63, "{0:<s} {1:<.4G}".format("MDP1 (mV):", mdp1), ha='left', va='center')
-                    mpp.figtext(0.12, 0.60, "{0:<s} {1:<.4G}".format("MDP2 (mV):", mdp2), ha='left', va='center')
-                    mpp.figtext(0.12, 0.57, "{0:<s} {1:<.4G}".format("THR (mV):", thr), ha='left', va='center')
-                    mpp.figtext(0.12, 0.54, "{0:<s} {1:<.4G}".format("PP (mV):", pp), ha='left', va='center')
-                    mpp.figtext(0.12, 0.51, "{0:<s} {1:<.4G}".format("APA (mV):", apa), ha='left', va='center')
-                    mpp.figtext(0.12, 0.48, "{0:<s} {1:<.4G}".format("DDR (mV/ms):", ddr), ha='left', va='center')
-                    mpp.figtext(0.12, 0.45, "{0:<s} {1:<.4G}".format("MUV (mV/ms):", muv), ha='left', va='center')
-                    mpp.figtext(0.12, 0.42, "{0:<s} {1:<.4G}".format("TRR (mV/ms):", trr), ha='left', va='center')
-                    mpp.figtext(0.12, 0.39, "{0:<s} {1:<.4G}".format("MRR (mV/ms):", mrr), ha='left', va='center')
+                    mpp.figtext(0.12, 0.91, "{0:<s} {1:<.4G}".format("APs (#):", rawfmax_y.size), ha='left', va='center')
+                    mpp.figtext(0.12, 0.88, "{0:<s} {1:<.4G}".format("FR (AP/min):", frate), ha='left', va='center')
+                    mpp.figtext(0.12, 0.85, "{0:<s} {1:<.4G}".format("CL (ms):", cl), ha='left', va='center')
+                    mpp.figtext(0.12, 0.82, "{0:<s} {1:<.4G}".format("DD (ms):", dd), ha='left', va='center')
+                    mpp.figtext(0.12, 0.79, "{0:<s} {1:<.4G}".format("EDD (ms):", edd), ha='left', va='center')
+                    mpp.figtext(0.12, 0.76, "{0:<s} {1:<.4G}".format("LDD (ms):", ldd), ha='left', va='center')
+                    mpp.figtext(0.12, 0.73, "{0:<s} {1:<.4G}".format("APD (ms):", apd), ha='left', va='center')
+                    mpp.figtext(0.12, 0.70, "{0:<s} {1:<.4G}".format("APD30 (ms):", apd30), ha='left', va='center')
+                    mpp.figtext(0.12, 0.67, "{0:<s} {1:<.4G}".format("APD50 (ms):", apd50), ha='left', va='center')
+                    mpp.figtext(0.12, 0.64, "{0:<s} {1:<.4G}".format("APD90 (ms):", apd90), ha='left', va='center')
+                    mpp.figtext(0.12, 0.61, "{0:<s} {1:<.4G}".format("MDP1 (mV):", mdp1), ha='left', va='center')
+                    mpp.figtext(0.12, 0.58, "{0:<s} {1:<.4G}".format("MDP2 (mV):", mdp2), ha='left', va='center')
+                    mpp.figtext(0.12, 0.55, "{0:<s} {1:<.4G}".format("THR (mV):", thr), ha='left', va='center')
+                    mpp.figtext(0.12, 0.52, "{0:<s} {1:<.4G}".format("PP (mV):", pp), ha='left', va='center')
+                    mpp.figtext(0.12, 0.49, "{0:<s} {1:<.4G}".format("APA (mV):", apa), ha='left', va='center')
+                    mpp.figtext(0.12, 0.46, "{0:<s} {1:<.4G}".format("DDR (mV/ms):", ddr), ha='left', va='center')
+                    mpp.figtext(0.12, 0.43, "{0:<s} {1:<.4G}".format("MUV (mV/ms):", muv), ha='left', va='center')
+                    mpp.figtext(0.12, 0.40, "{0:<s} {1:<.4G}".format("TRR (mV/ms):", trr), ha='left', va='center')
+                    mpp.figtext(0.12, 0.37, "{0:<s} {1:<.4G}".format("MRR (mV/ms):", mrr), ha='left', va='center')
                     mpp.subplot2grid((4, 1), (3, 0))  # lower subplot
                     mpp_setup(title="", xlabel='Time (ms)', ylabel='(mV/ms)')
                     mpp.plot([avg_x[0], avg_x[-1]], [0.0, 0.0], '0.85')  # x axis
@@ -797,11 +807,11 @@ for ATFFILE in ATFFILES:  # iterate through files
                     with open(sum_file, 'a') as targetfile:  # append file
                         if newfile:  # write header
                             targetfile.write(
-                                "{0:s}\t{1:s}\t{2:s}\t{3:s}\t{4:s}\t{5:s}\t{6:s}\t{7:s}\t{8:s}\t{9:s}\t{10:s}\t{11:s}\t{12:s}\t{13:s}\t{14:s}\t{15:s}\t{16:s}\t{17:s}\t{18:s}\t{19:s}\t{20:s}".format(
-                                    "File ( )", "Start (ms)", "Stop (ms)", "APs (#)", "FR (AP/min)", "CL (ms)", "DD (ms)", "EDD (ms)", "LDD (ms)", "APD (ms)", "APD50 (ms)", "APD90 (ms)", "MDP1 (mV)", "MDP2 (mV)", "THR (mV)", "PP (mV)", "APA (mV)", "DDR (mV/ms)", "MUV (mV/ms)", "TRR (mV/ms)", "MRR (mV/ms)") + "\n")
+                                "{0:s}\t{1:s}\t{2:s}\t{3:s}\t{4:s}\t{5:s}\t{6:s}\t{7:s}\t{8:s}\t{9:s}\t{10:s}\t{11:s}\t{12:s}\t{13:s}\t{14:s}\t{15:s}\t{16:s}\t{17:s}\t{18:s}\t{19:s}\t{20:s}\t{21:s}".format(
+                                    "File ( )", "Start (ms)", "Stop (ms)", "APs (#)", "FR (AP/min)", "CL (ms)", "DD (ms)", "EDD (ms)", "LDD (ms)", "APD (ms)", "APD30 (ms)", "APD50 (ms)", "APD90 (ms)", "MDP1 (mV)", "MDP2 (mV)", "THR (mV)", "PP (mV)", "APA (mV)", "DDR (mV/ms)", "MUV (mV/ms)", "TRR (mV/ms)", "MRR (mV/ms)") + "\n")
                         targetfile.write(
-                            "{0:s}\t{1:4G}\t{2:4G}\t{3:4G}\t{4:4G}\t{5:4G}\t{6:4G}\t{7:4G}\t{8:4G}\t{9:4G}\t{10:4G}\t{11:4G}\t{12:4G}\t{13:4G}\t{14:4G}\t{15:4G}\t{16:4G}\t{17:4G}\t{18:4G}\t{19:4G}\t{20:4G}".format(
-                                name, tmp_start, tmp_stop, rawfmax_y.size, frate, cl, dd, edd, ldd, apd, apd50, apd90, mdp1, mdp2, thr, pp, apa, ddr, muv, trr, mrr) + "\n")
+                            "{0:s}\t{1:4G}\t{2:4G}\t{3:4G}\t{4:4G}\t{5:4G}\t{6:4G}\t{7:4G}\t{8:4G}\t{9:4G}\t{10:4G}\t{11:4G}\t{12:4G}\t{13:4G}\t{14:4G}\t{15:4G}\t{16:4G}\t{17:4G}\t{18:4G}\t{19:4G}\t{20:4G}\t{21:4G}".format(
+                                name, tmp_start, tmp_stop, rawfmax_y.size, frate, cl, dd, edd, ldd, apd, apd30, apd50, apd90, mdp1, mdp2, thr, pp, apa, ddr, muv, trr, mrr) + "\n")
                         targetfile.flush()
                     sys.stdout.write(8*"\t" + "   [OK]\n")
                     sys.stdout.flush()
