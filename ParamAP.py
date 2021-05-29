@@ -202,32 +202,31 @@ def mpp_setup(title='Plot title', xlabel='Time [ ]', ylabel='Voltage [ ]'):
 
 
 def readfile(inputfile='name'):
-    """Extracts the xy pairs from an ASCII raw file and stores its values into a numpy array."""
+    """ read an atf file into a numpy array """
     defux = ["ms", "s"]
     defuy = ["mV", "V"]
     inpunits = False
-    with open(inputfile, 'r') as datafile:
-        line = 1
-        inpuxy = []  # header might be missing
-        while line <= 25:  # arbitrary Clampfit header limit for ATF
-            headerline = datafile.readline()
-            if headerline.startswith("\""):
-                inpuxy = str(headerline).split()  # last line of header contains units
-                skipline = line
-            if not inpuxy:
-                skipline = 0
-            line += 1
-        try:
-            inpux = inpuxy[1][1:-2]
-            inpuy = inpuxy[4][1:-2]
-        except IndexError:  # missing header
-            inpux, inpuy = str(defux)[1:-1], str(defuy)[1:-1]
-        else:  # header found
-            if inpux in defux and inpuy in defuy:
-                inpunits = True
-        datafile.seek(0)  # reset the file index to the first byte
-        inp_xy = np.loadtxt(datafile, dtype='float64', delimiter='\t', skiprows=skipline, unpack=True)  # slower than np.genfromtxt or native python, but uses less main memory at peak
-        return inp_xy, inpunits, inpux, inpuy
+    try:
+        with open(inputfile, 'r') as in_data:
+            full_record = []  # python list
+            for _ in range(0, 2):
+                full_record.append(in_data.readline().strip().split())  # first and second record
+            full_record.append([in_data.readline().strip() for line in range(0, int(full_record[1][0]))])  # optional record
+            full_record.append([in_data.readline().strip().split('\t')])  # title record
+            full_record.append(np.genfromtxt(in_data, dtype='float', delimiter='\t', unpack=True))  # data record, use: 'np.loadtxt()' for limited memory usage, but lower speed
+    except FileNotFoundError:
+        print("Error! File not found.")
+        read_result = None
+        raise
+    else:
+        inpuxy = full_record[3][0]
+        inpux = str(inpuxy[0]).split()[-1][1:-2]
+        inpuy = str(inpuxy[1]).split()[-1][1:-2]
+        if inpux in defux and inpuy in defuy:
+            inpunits = True
+        inp_xy = full_record[4]
+        read_result = inp_xy, inpunits, inpux, inpuy
+    return read_result
 
 
 def toggle_mpp_imode(activate=True):
