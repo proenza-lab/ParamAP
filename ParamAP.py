@@ -65,10 +65,10 @@ def askboolean(dlabel="custom boolean", dval=True):
         dstr = "y/N"
     while True:
         uchoice = input(dlabel + " [" + dstr + "]: ") or dstr
-        if uchoice.lower().startswith("y") and not uchoice.endswith("N"):
+        if uchoice in ["Y/n", "Y", "y", "Yes", "yes"]:
             print("True\n")
             return True  # break
-        elif (uchoice.endswith("N") and not uchoice.startswith("Y")) or uchoice.lower().startswith("n"):
+        elif uchoice in ["y/N", "N", "n", "No", "no"]:
             print("False\n")
             return False  # break
         else:
@@ -248,7 +248,7 @@ AUTHOR = "Copyright 2021 The Regents of the University of Colorado"
 SEPARBOLD = 79*'='
 SEPARNORM = 79*'-'
 SOFTWARE = "ParamAP"
-VERSION = "version 1.3,"  # (2021-05-28)
+VERSION = "version 1.3,"  # (2021-05-29)
 WORKDIR = SOFTWARE  # working directory for parameterization
 print('{0:^79}'.format(SEPARBOLD) + os.linesep)
 GREETER = '{0:<{w0}}{1:<{w1}}{2:<{w2}}'.format(SOFTWARE, VERSION, AUTHOR, w0=len(SOFTWARE)+1, w1=len(VERSION)+1, w2=len(AUTHOR)+1)
@@ -283,15 +283,15 @@ for ATFFILE in ATFFILES:  # iterate through files
     print('{0:^79}'.format(SEPARNORM))
     print("FILE:\t" + str(name) + os.linesep)
 
-    ap_amp = 50.0  # minimum acceptable ap amplitude (mV)
-    ap_hwd = 250.0  # maximum acceptable ap half width (ms)
-    ap_max = 50.0  # maximum acceptable ap value (mV)
-    ap_min = -10.0  # minimum acceptable ap value (mV)
-    mdp_max = -50.0  # maximum acceptable mdp value (mV)
-    mdp_min = -90.0  # minimum acceptable mdp value (mV)
-    wm_der = 1.0  # window multiplier for derivative filtering
-    wm_max = 4.0  # window multiplier for maximum detection
-    wm_min = 16.0  # window multiplier for minimum detection
+    AP_AMP = 50.0  # minimum acceptable ap amplitude (mV)
+    AP_HWD = 250.0  # maximum acceptable ap half width (ms)
+    AP_MAX = 50.0  # maximum acceptable ap value (mV)
+    AP_MIN = -10.0  # minimum acceptable ap value (mV)
+    MDP_MAX = -50.0  # maximum acceptable mdp value (mV)
+    MDP_MIN = -90.0  # minimum acceptable mdp value (mV)
+    WM_DER = 1.0  # window multiplier for derivative filtering
+    WM_MAX = 4.0  # window multiplier for maximum detection
+    WM_MIN = 16.0  # window multiplier for minimum detection
 
     # read file raw data
     sys.stdout.write(">> READING... ")
@@ -302,26 +302,26 @@ for ATFFILE in ATFFILES:  # iterate through files
         UNIT_X = askunit(dlabel="X-axis unit", daxis="X", dunit=UNIT_X)
         UNIT_Y = askunit(dlabel="Y-axis unit", daxis="Y", dunit=UNIT_Y)
         sys.stdout.write(1*"\t")
-    toms = 1000.0 if UNIT_X == "s" else 1.0
-    RAW_XY[0] *= toms  # full X-axis, UNIT_X = "ms"
+    TOMS = 1000.0 if UNIT_X == "s" else 1.0
+    RAW_XY[0] *= TOMS  # full X-axis, UNIT_X = "ms"
     raw_x = RAW_XY[0]  # partial X-axis for time series analysis
-    tomv = 1000.0 if UNIT_Y == "V" else 1.0
-    RAW_XY[1] *= tomv  # full Y-axis, UNIT_Y = "mV"
+    TOMV = 1000.0 if UNIT_Y == "V" else 1.0
+    RAW_XY[1] *= TOMV  # full Y-axis, UNIT_Y = "mV"
     raw_y = RAW_XY[1]  # partial Y-axis for time series analysis
     runavg = getrunavg(RAW_XY[0])  # used for filtering and peak detection
     ipg_t = RAW_XY[0][1]-RAW_XY[0][0]  # time increment for interpolation grid
     if not APMODE:  # avoid noise artifacts in beat detection mode
         runavg = 10.0*runavg+1
-        wm_max *= 1.5
-        wm_min = wm_max
+        WM_MAX *= 1.5
+        WM_MIN = WM_MAX
     avg_start = RAW_XY[0][0]  # interval start for averaging
     avg_stop = RAW_XY[0][-1]  # interval stop for averaging
     sys.stdout.write(8*"\t" + "   [OK]\n")
     sys.stdout.flush()
 
     while True:  # repeat data analysis for current file
-        startpdf = True  # overwrite existing file
-        segment = 0.0
+        STARTPDF = True  # overwrite existing file
+        SEGMENT = 0.0
         while True:  # time series analysis
 
             try:
@@ -331,12 +331,12 @@ for ATFFILE in ATFFILES:  # iterate through files
                 mpp_setup(title="Raw data: " + name, xlabel='Time (ms)', ylabel='Voltage (mV)')
                 mpp.plot(raw_x, raw_y, '0.75')  # raw data (grey line)
 
-                if startpdf:
+                if STARTPDF:
                     pdf_file = mpbp.PdfPages(os.path.join(WORKDIR, name + ".pdf"), keep_empty=False)  # multi-pdf file
-                    startpdf = False   # append existing file
+                    STARTPDF = False   # append existing file
                 mpp.tight_layout()  # avoid label overlaps
 
-                if segment == 0.0:
+                if SEGMENT == 0.0:
                     mpp.savefig(pdf_file, format='pdf', dpi=600)  # save before .show()!
                 sys.stdout.write(8*"\t" + "   [OK]\n")
                 sys.stdout.flush()
@@ -351,24 +351,24 @@ for ATFFILE in ATFFILES:  # iterate through files
 
                 if not AUTORUN:
                     print("\n")
-                    if segment == 0.0:  # initialize values
+                    if SEGMENT == 0.0:  # initialize values
                         avg_start = askvalue(dlabel="analysis start time", dval=avg_start, dunit=' ms')
                         avg_stop = askvalue(dlabel="analysis stop time", dval=avg_stop, dunit=' ms')
-                    ap_max = askvalue(dlabel="upper limit for maxima", dval=ap_max, dunit=' mV')
-                    ap_min = askvalue(dlabel="lower limit for maxima", dval=ap_min, dunit=' mV')
-                    mdp_max = askvalue(dlabel="upper limit for minima", dval=mdp_max, dunit=' mV')
-                    mdp_min = askvalue(dlabel="lower limit for minima", dval=mdp_min, dunit=' mV')
+                    AP_MAX = askvalue(dlabel="upper limit for maxima", dval=AP_MAX, dunit=' mV')
+                    AP_MIN = askvalue(dlabel="lower limit for maxima", dval=AP_MIN, dunit=' mV')
+                    MDP_MAX = askvalue(dlabel="upper limit for minima", dval=MDP_MAX, dunit=' mV')
+                    MDP_MIN = askvalue(dlabel="lower limit for minima", dval=MDP_MIN, dunit=' mV')
                     if APMODE:
-                        ap_hwd = askvalue(dlabel="maximum peak half width", dval=ap_hwd, dunit=' ms')
-                        ap_amp = askvalue(dlabel="minimum peak amplitude", dval=ap_amp, dunit=' mV')
+                        AP_HWD = askvalue(dlabel="maximum peak half width", dval=AP_HWD, dunit=' ms')
+                        AP_AMP = askvalue(dlabel="minimum peak amplitude", dval=AP_AMP, dunit=' mV')
                     runavg = askvalue(dlabel="running average window size", dval=runavg, dunit='', dtype='int')
-                    wm_der = askvalue(dlabel="window multiplier for derivative", dval=wm_der, dunit='')
-                    wm_max = askvalue(dlabel="window multiplier for maxima", dval=wm_max, dunit='')
-                    wm_min = askvalue(dlabel="window multiplier for minima", dval=wm_min, dunit='')
+                    WM_DER = askvalue(dlabel="window multiplier for derivative", dval=WM_DER, dunit='')
+                    WM_MAX = askvalue(dlabel="window multiplier for maxima", dval=WM_MAX, dunit='')
+                    WM_MIN = askvalue(dlabel="window multiplier for minima", dval=WM_MIN, dunit='')
                 mpp.clf()  # clear canvas
 
-                if segment == 0.0:  # set first frame
-                    tmp_start = avg_start + (segment*AVG_FRAME if SERIES else 0.0)
+                if SEGMENT == 0.0:  # set first frame
+                    tmp_start = avg_start + (SEGMENT*AVG_FRAME if SERIES else 0.0)
                     tmp_stop = (tmp_start + AVG_FRAME) if SERIES else avg_stop
                     raw_i = np.argwhere((RAW_XY[0] >= tmp_start) & (RAW_XY[0] <= tmp_stop)).ravel()
                     raw_x = RAW_XY[0][raw_i[0]:raw_i[-1]+1]
@@ -391,13 +391,13 @@ for ATFFILE in ATFFILES:  # iterate through files
                 if AUTORUN:  # use unrestricted dataset (slower)
 
                     # detect maxima in filtered raw data
-                    tmpavg = int(round(wm_max*runavg)) if int(round(wm_max*runavg)) % 2 else int(round(wm_max*runavg))+1
+                    tmpavg = int(round(WM_MAX*runavg)) if int(round(WM_MAX*runavg)) % 2 else int(round(WM_MAX*runavg))+1
                     rawfmax_iii = np.asarray(sp_sig.argrelmax(rawf_y, order=tmpavg)).ravel()  # unfiltered maxima
                     rawfmax_x = raw_x[rawfmax_iii]
                     rawfmax_y = rawf_y[rawfmax_iii]
 
                     # detect minima in filtered raw data
-                    tmpavg = int(round(wm_min*runavg)) if int(round(wm_min*runavg)) % 2 else int(round(wm_min*runavg))+1
+                    tmpavg = int(round(WM_MIN*runavg)) if int(round(WM_MIN*runavg)) % 2 else int(round(WM_MIN*runavg))+1
                     rawfmin_iii = np.asarray(sp_sig.argrelmin(rawf_y, order=tmpavg)).ravel()  # unfiltered minima
                     rawfmin_x = raw_x[rawfmin_iii]
                     rawfmin_y = rawf_y[rawfmin_iii]
@@ -407,18 +407,18 @@ for ATFFILE in ATFFILES:  # iterate through files
                 else:  # use restricted dataset (faster)
 
                     # detect maxima in filtered raw data
-                    tmpmax_x = raw_x[np.intersect1d(np.argwhere(rawf_y >= ap_min), np.argwhere(rawf_y <= ap_max))]
-                    tmpmax_y = rawf_y[np.intersect1d(np.argwhere(rawf_y >= ap_min), np.argwhere(rawf_y <= ap_max))]
-                    tmpavg = int(round(wm_max*runavg)) if int(round(wm_max*runavg)) % 2 else int(round(wm_max*runavg))+1
+                    tmpmax_x = raw_x[np.intersect1d(np.argwhere(rawf_y >= AP_MIN), np.argwhere(rawf_y <= AP_MAX))]
+                    tmpmax_y = rawf_y[np.intersect1d(np.argwhere(rawf_y >= AP_MIN), np.argwhere(rawf_y <= AP_MAX))]
+                    tmpavg = int(round(WM_MAX*runavg)) if int(round(WM_MAX*runavg)) % 2 else int(round(WM_MAX*runavg))+1
                     rawfmax_iii = np.asarray(sp_sig.argrelmax(tmpmax_y, order=tmpavg)).ravel()  # unfiltered maxima
                     rawfmax_ii = np.asarray(np.where(np.in1d(raw_x.ravel(), np.intersect1d(raw_x, tmpmax_x[rawfmax_iii]).ravel()).reshape(raw_x.shape))).ravel()  # back to full dataset
                     rawfmax_x = raw_x[rawfmax_ii]
                     rawfmax_y = rawf_y[rawfmax_ii]
 
                     # detect minima in filtered raw data
-                    tmpmin_x = raw_x[np.intersect1d(np.argwhere(rawf_y >= mdp_min), np.argwhere(rawf_y <= mdp_max))]
-                    tmpmin_y = rawf_y[np.intersect1d(np.argwhere(rawf_y >= mdp_min), np.argwhere(rawf_y <= mdp_max))]
-                    tmpavg = int(round(wm_min*runavg)) if int(round(wm_min*runavg)) % 2 else int(round(wm_min*runavg))+1
+                    tmpmin_x = raw_x[np.intersect1d(np.argwhere(rawf_y >= MDP_MIN), np.argwhere(rawf_y <= MDP_MAX))]
+                    tmpmin_y = rawf_y[np.intersect1d(np.argwhere(rawf_y >= MDP_MIN), np.argwhere(rawf_y <= MDP_MAX))]
+                    tmpavg = int(round(WM_MIN*runavg)) if int(round(WM_MIN*runavg)) % 2 else int(round(WM_MIN*runavg))+1
                     rawfmin_iii = np.asarray(sp_sig.argrelmin(tmpmin_y, order=tmpavg)).ravel()  # unfiltered minima
                     rawfmin_ii = np.asarray(np.where(np.in1d(raw_x.ravel(), np.intersect1d(raw_x, tmpmin_x[rawfmin_iii]).ravel()).reshape(raw_x.shape))).ravel()
                     rawfmin_x = raw_x[rawfmin_ii]
@@ -440,9 +440,9 @@ for ATFFILE in ATFFILES:  # iterate through files
                     rawfmax_x = rawfmax_x[rawfmax_ii]
                     rawfmax_y = rawfmax_y[rawfmax_ii]
                     rawfmax_std = np.std(rawfmax_y, ddof=1)  # standard deviation from the (estimated) arithmetic mean
-                    ap_max = np.mean(rawfmax_y) + 4.0 * rawfmax_std  # 99% confidence interval
-                    ap_min = np.mean(rawfmax_y) - 4.0 * rawfmax_std
-                    rawfmax_ii = functools.reduce(np.intersect1d, (rawfmax_iii, np.argwhere(rawf_y >= ap_min), np.argwhere(rawf_y <= ap_max)))
+                    AP_MAX = np.mean(rawfmax_y) + 4.0 * rawfmax_std  # 99% confidence interval
+                    AP_MIN = np.mean(rawfmax_y) - 4.0 * rawfmax_std
+                    rawfmax_ii = functools.reduce(np.intersect1d, (rawfmax_iii, np.argwhere(rawf_y >= AP_MIN), np.argwhere(rawf_y <= AP_MAX)))
                     rawfmax_x = raw_x[rawfmax_ii]
                     rawfmax_y = rawf_y[rawfmax_ii]
 
@@ -451,16 +451,16 @@ for ATFFILE in ATFFILES:  # iterate through files
                     rawfmin_x = rawfmin_x[rawfmin_ii].ravel()
                     rawfmin_y = rawfmin_y[rawfmin_ii].ravel()
                     rawfmin_std = np.std(rawfmin_y, ddof=1)
-                    mdp_max = np.mean(rawfmin_y) + 4.0 * rawfmin_std
-                    mdp_min = np.mean(rawfmin_y) - 4.0 * rawfmin_std
-                    rawfmin_ii = functools.reduce(np.intersect1d, (rawfmin_iii, np.argwhere(rawf_y >= mdp_min), np.argwhere(rawf_y <= mdp_max)))
+                    MDP_MAX = np.mean(rawfmin_y) + 4.0 * rawfmin_std
+                    MDP_MIN = np.mean(rawfmin_y) - 4.0 * rawfmin_std
+                    rawfmin_ii = functools.reduce(np.intersect1d, (rawfmin_iii, np.argwhere(rawf_y >= MDP_MIN), np.argwhere(rawf_y <= MDP_MAX)))
                     rawfmin_x = raw_x[rawfmin_ii]
                     rawfmin_y = rawf_y[rawfmin_ii]
 
                 if APMODE:  # check extrema for consistency - reduce maxima
                     badmax_ii = np.zeros(0)
                     badmin_ii = np.zeros(0)
-                    rawfmin_i, badmax_ii = getneighbors(rawfmax_ii, rawfmin_ii, raw_x, rawf_y, ap_hwd, ap_amp, bads=True)
+                    rawfmin_i, badmax_ii = getneighbors(rawfmax_ii, rawfmin_ii, raw_x, rawf_y, AP_HWD, AP_AMP, bads=True)
                     rawfmax_i = np.delete(rawfmax_ii, badmax_ii)
                     rawfmin_i = rawfmin_i.astype(int)  # casting required for indexing
 
@@ -488,16 +488,16 @@ for ATFFILE in ATFFILES:  # iterate through files
                     rawfmin_kdt = sp_spat.KDTree(list(zip(rawfmin_i, np.zeros(rawfmin_i.size))))
                     i = 0  # index
                     for max_i in rawfmax_i:
-                        min_left, min_right = False, False
+                        MIN_LEFT, MIN_RIGHT = False, False
                         minmaxmin[i][1] = max_i
                         for order_i in rawfmin_kdt.query([max_i, 0.0], k=None)[1]:
                             min_i = rawfmin_i[order_i]
-                            if not min_left and (min_i < max_i):
+                            if not MIN_LEFT and (min_i < max_i):
                                 minmaxmin[i][0] = min_i
-                                min_left = True
-                            elif not min_right and (min_i > max_i):
+                                MIN_LEFT = True
+                            elif not MIN_RIGHT and (min_i > max_i):
                                 minmaxmin[i][2] = min_i
-                                min_right = True
+                                MIN_RIGHT = True
                         i += 1
                     rawfmin_i = np.unique(minmaxmin[:, [0, 2]].ravel())
                     rawfmin_x = raw_x[rawfmin_i]  # filtered and extracted minima
@@ -539,12 +539,12 @@ for ATFFILE in ATFFILES:  # iterate through files
                 mpp.plot([raw_x[0], raw_x[-1]], [0.0, 0.0], '0.85')  # X-Axis (grey line)
                 mpp.plot([raw_x[0], raw_x[-1]], [rawfmaxmin_m, rawfmaxmin_m], 'k--')  # center between unfiltered maxima and unfiltered minima, i.e. not between AVGMAX and AVGMIN (black dashed line)
                 mpp.plot(raw_x, raw_y, '0.50', raw_x, rawf_y, 'r')  # raw data and averaged data (grey, red line)
-                mpp.plot([raw_x[0], raw_x[-1]], [ap_max, ap_max], 'b')  # upper limit for maxima (blue dotted line)
-                mpp.plot([raw_x[0], raw_x[-1]], [ap_min, ap_min], 'b:')  # lower limit for maxima (blue dotted line)
-                mpp.plot([rawfmax_x, rawfmax_x], [ap_min, ap_max], 'b')  # accepted maxima (blue line)
-                mpp.plot([raw_x[0], raw_x[-1]], [mdp_min, mdp_min], 'g')  # lower limit for minima (green line)
-                mpp.plot([raw_x[0], raw_x[-1]], [mdp_max, mdp_max], 'g:')  # upper limit for minima (green dotted line)
-                mpp.plot([rawfmin_x, rawfmin_x], [mdp_min, mdp_max], 'g')  # accepted minima (green line)
+                mpp.plot([raw_x[0], raw_x[-1]], [AP_MAX, AP_MAX], 'b')  # upper limit for maxima (blue dotted line)
+                mpp.plot([raw_x[0], raw_x[-1]], [AP_MIN, AP_MIN], 'b:')  # lower limit for maxima (blue dotted line)
+                mpp.plot([rawfmax_x, rawfmax_x], [AP_MIN, AP_MAX], 'b')  # accepted maxima (blue line)
+                mpp.plot([raw_x[0], raw_x[-1]], [MDP_MIN, MDP_MIN], 'g')  # lower limit for minima (green line)
+                mpp.plot([raw_x[0], raw_x[-1]], [MDP_MAX, MDP_MAX], 'g:')  # upper limit for minima (green dotted line)
+                mpp.plot([rawfmin_x, rawfmin_x], [MDP_MIN, MDP_MAX], 'g')  # accepted minima (green line)
                 mpp.plot([rawfmax_x[0], rawfmax_x[-1]], [rawfmax_m, rawfmax_m], 'k')  # average of maxima, time interval used for firing rate count (black line)
                 mpp.plot([rawfmin_x[0], rawfmin_x[-1]], [rawfmin_m, rawfmin_m], 'k')  # average of minima (black line)
                 mpp.plot(raw_x[rawfmax_ii], rawf_y[rawfmax_ii], 'bo')  # maxima (blue dots)
@@ -578,27 +578,27 @@ for ATFFILE in ATFFILES:  # iterate through files
                     avgxsize = avg_x.size
                     avg_y = np.zeros(avgxsize, dtype='float64')  # ap average array
                     mpp.subplot2grid((4, 1), (0, 0), rowspan=3)  # upper subplot
-                    timestamp = "[" + str(round(tmp_start, 2)) + "ms-" + str(round(tmp_stop, 2)) + "ms]"
-                    mpp_setup(title='Analysis: ' + name + ' ' + timestamp, xlabel='Time (ms)', ylabel='Voltage (mV)')
+                    TIMESTAMP = "[" + str(round(tmp_start, 2)) + "ms-" + str(round(tmp_stop, 2)) + "ms]"
+                    mpp_setup(title='Analysis: ' + name + ' ' + TIMESTAMP, xlabel='Time (ms)', ylabel='Voltage (mV)')
                     mpp.plot([avg_x[0], avg_x[-1]], [0.0, 0.0], '0.85')  # X-axis
-                    n = 0  # current maximum
+                    N = 0  # current maximum
                     for min_l, max_c, min_r in minmaxmin:  # slicing of ap segments, extend ap parts if possible
                         minext_l = int(min_l - APEXT*(max_c - min_l))  # use int for index slicing
                         minext_r = int(min_r + APEXT*(min_r - max_c))
-                        # prepare ap segment
+                        # prepare ap SEGMENT
                         tmp_x = np.asarray(raw_x[:] - raw_x[max_c])  # align by maximum
                         tmp_y = np.interp(avg_x, tmp_x, raw_y[:])
                         # average ap segments
-                        if n == 0:  # first average
+                        if N == 0:  # first average
                             avg_y = np.copy(tmp_y)
                         else:  # all other averages
                             i = 0  # array index
-                            nw = (1.0/(n+1.0))  # new data weight
-                            pw = (n/(n+1.0))  # previous data weight
+                            NW = (1.0/(N+1.0))  # new data weight
+                            pw = (N/(N+1.0))  # previous data weight
                             for y in np.nditer(avg_y, op_flags=['readwrite']):
-                                y[...] = pw*y + nw*tmp_y[i]  # integrate raw data into averaged data
+                                y[...] = pw*y + NW*tmp_y[i]  # integrate raw data into averaged data
                                 i += 1
-                        n += 1
+                        N += 1
                         mpp.plot(avg_x, tmp_y, '0.75')  # plot aligned raw data segments
                     sys.stdout.write("\t\t\t\t\t\t\t   [OK]\n")
                     sys.stdout.flush()
@@ -613,7 +613,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     # detect "Peak potential: Maximum potential of AP" (PP) (mV)
                     avgfmax_i = np.argwhere(avg_x == 0.0)  # data point for maximum centered
                     if not avgfmax_i.size > 0:  # data point for maximum left or right of center
-                        tmpavg = int(round(wm_max*runavg)) if int(round(wm_max*runavg)) % 2 else int(round(wm_max*runavg))+1
+                        tmpavg = int(round(WM_MAX*runavg)) if int(round(WM_MAX*runavg)) % 2 else int(round(WM_MAX*runavg))+1
                         avgfmax_ii = np.asarray(sp_sig.argrelmax(avgf_y, order=tmpavg)).ravel()  # find all maxima
                         avgfmax_i = avgfmax_ii[np.argmin(np.abs(avg_x[avgfmax_ii] - 0.0))]  # return the maximum closest to X = 0.0
                     avgfmax_x = avg_x[avgfmax_i]
@@ -622,9 +622,9 @@ for ATFFILE in ATFFILES:  # iterate through files
                     pp = pp_y
 
                     # detect and reduce (several) minima in filtered average data,
-                    tmpavg = int(round(wm_min*runavg)) if int(round(wm_min*runavg)) % 2 else int(round(wm_min*runavg))+1
+                    tmpavg = int(round(WM_MIN*runavg)) if int(round(WM_MIN*runavg)) % 2 else int(round(WM_MIN*runavg))+1
                     avgfmin_ii = np.asarray(sp_sig.argrelmin(avgf_y, order=tmpavg)).ravel()  # find all minima
-                    avgfmin_i = getneighbors(np.asarray([avgfmax_i]), avgfmin_ii, avg_x, avgf_y, ap_hwd, ap_amp)
+                    avgfmin_i = getneighbors(np.asarray([avgfmax_i]), avgfmin_ii, avg_x, avgf_y, AP_HWD, AP_AMP)
                     avgfmin_x = avg_x[avgfmin_i]
                     avgfmin_y = avgf_y[avgfmin_i]
 
@@ -673,11 +673,11 @@ for ATFFILE in ATFFILES:  # iterate through files
                     avgfg_y = avgfg_y / ipg_t  # dY/dX, differences per increment
 
                     # filter derivative of averaged data
-                    tmpavg = int(round(wm_der*runavg)) if int(round(wm_der*runavg)) % 2 else int(round(wm_der*runavg))+1
+                    tmpavg = int(round(WM_DER*runavg)) if int(round(WM_DER*runavg)) % 2 else int(round(WM_DER*runavg))+1
                     avgfgf_y = sp_sig.savgol_filter(avgfg_y, tmpavg, POLYNOM, mode='nearest')
 
                     # determine "Maximum upstroke velocity: Maximum of derivative between MDP1 and PP" (MUV) (mV/ms)
-                    tmpavg = int(round(wm_max*runavg)) if int(round(wm_max*runavg)) % 2 else int(round(wm_max*runavg))+1
+                    tmpavg = int(round(WM_MAX*runavg)) if int(round(WM_MAX*runavg)) % 2 else int(round(WM_MAX*runavg))+1
                     avgfgfmax_ii = functools.reduce(np.intersect1d, (sp_sig.argrelmax(avgfgf_y, order=tmpavg), np.argwhere(avg_x >= mdp1_x), np.argwhere(avg_x <= avgfmax_x)))
                     avgfgfmax_i = getneighbors(np.asarray([avgfmax_i]), avgfgfmax_ii, avg_x, avgfgf_y)[0]  # avoid errors from large ap part extensions
                     avgfgfmax_x = avg_x[avgfgfmax_i]
@@ -685,9 +685,10 @@ for ATFFILE in ATFFILES:  # iterate through files
                     muv = float(avgfgfmax_y)
 
                     # determine "Maximum repolarization rate: Minimum of derivative between PP and MDP2" (MRR) (mV/ms)
-                    tmpavg = int(round(wm_min*runavg)) if int(round(wm_min*runavg)) % 2 else int(round(wm_min*runavg))+1
+                    tmpavg = int(round(WM_MIN*runavg)) if int(round(WM_MIN*runavg)) % 2 else int(round(WM_MIN*runavg))+1
                     avgfgfmin_ii = functools.reduce(np.intersect1d, (sp_sig.argrelmin(avgfgf_y, order=tmpavg), np.argwhere(avg_x >= avgfmax_x), np.argwhere(avg_x <= mdp2_x)))
                     avgfgfmin_i = getneighbors(np.asarray([apd90_i[-1]+1]), avgfgfmin_ii, avg_x, avgfgf_y)[0]  # mrr or trr
+
                     # determine "Transient repolarization rate: Second minimum of derivative between PP and MDP2 after PP, if distinct from MRR" (TRR) (mV/ms)
                     avgfgfmin_i = np.append(avgfgfmin_i, getneighbors(np.asarray([avgfgfmax_i]), avgfgfmin_ii, avg_x, avgfgf_y)[1])  # trr only
 
@@ -695,8 +696,10 @@ for ATFFILE in ATFFILES:  # iterate through files
                     avgfgfmin_y = avgfgf_y[avgfgfmin_i]
                     mrr = float(avgfgf_y[avgfgfmin_i][0])
                     if avgfgfmin_i[0] == avgfgfmin_i[1]:  # no trr
-                        trr = False
+                        WITH_TRR = False
+                        trr = float("nan")
                     else:
+                        WITH_TRR = True
                         trr = float(avgfgf_y[avgfgfmin_i][1])  # True
 
                     # approximate diastolic duration in filtered derivative
@@ -761,9 +764,9 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp.plot(thr_x, avgf_y[thr_i], 'ro')  # THR (red dot)
                     mpp.plot(avgfgfmax_x, avgf_y[avgfgfmax_i], 'wo')  # MUV (white dot)
                     mpp.plot(avgfgfmin_x[0], avgf_y[avgfgfmin_i[0]], 'wo')  # MRR (white dot)
-                    if trr:
-                        mpp.plot([avgfgfmin_x[1], avgfgfmin_x[1]], [mdp2_y, avgf_y[avgfgfmin_i[1]]], 'k:')  # TRR indicator (black dotted line)
-                        mpp.plot(avgfgfmin_x[1], avgf_y[avgfgfmin_i[1]], 'wo')  # TRR (white dot)
+                    if WITH_TRR:
+                        mpp.plot([avgfgfmin_x[1], avgfgfmin_x[1]], [mdp2_y, avgf_y[avgfgfmin_i[1]]], 'k:')  # trr indicator (black dotted line)
+                        mpp.plot(avgfgfmin_x[1], avgf_y[avgfgfmin_i[1]], 'wo')  # trr (white dot)
                     mpp.plot(avgfmax_x, pp_y, 'bo')  # PP (blue dot)
                     mpp.plot(avgfmin_x, avgfmin_y, 'go')  # MDP1, MDP2 (green dots)
                     mpp.figtext(0.12, 0.91, "{0:<s} {1:<.4G}".format("APs (#):", rawfmax_y.size), ha='left', va='center')
@@ -773,7 +776,6 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp.figtext(0.12, 0.79, "{0:<s} {1:<.4G}".format("EDD (ms):", edd), ha='left', va='center')
                     mpp.figtext(0.12, 0.76, "{0:<s} {1:<.4G}".format("LDD (ms):", ldd), ha='left', va='center')
                     mpp.figtext(0.12, 0.73, "{0:<s} {1:<.4G}".format("APD (ms):", apd), ha='left', va='center')
-
                     mpp.figtext(0.12, 0.70, "{0:<s} {1:<.4G}".format("LAPD (ms):", lapd), ha='left', va='center')
                     mpp.figtext(0.12, 0.67, "{0:<s} {1:<.4G}".format("APD50 (ms):", apd50), ha='left', va='center')
                     mpp.figtext(0.12, 0.64, "{0:<s} {1:<.4G}".format("APD90 (ms):", apd90), ha='left', va='center')
@@ -790,11 +792,11 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp_setup(title="", xlabel='Time (ms)', ylabel='(mV/ms)')
                     mpp.plot([avg_x[0], avg_x[-1]], [0.0, 0.0], '0.85')  # x axis
                     mpp.plot([avgfgfmin_x[0], avgfgfmin_x[0]], [avgfgfmin_y[0], avgfgfmax_y], 'k:')  # MRR indicator (black dotted line)
-                    if trr:
+                    if WITH_TRR:
                         mpp.plot([avgfgfmin_x[1], avgfgfmin_x[1]], [avgfgfmin_y[1], avgfgfmax_y], 'k:')  # TRR indicator (black dotted line)
                     mpp.plot([thr_x, thr_x], [avgfgf_y[thr_i], avgfgfmax_y], 'k:')  # THR indicator (black dotted line)
                     mpp.plot(avg_x, avgfg_y, 'c', avg_x, avgfgf_y, 'm')  # derivative and filtered derivative
-                    mpp.plot(avg_x[da_i], avgfgf_y[da_i], 'g')  # best linear fit segment for THR (green line)
+                    mpp.plot(avg_x[da_i], avgfgf_y[da_i], 'g')  # best linear fit SEGMENT for THR (green line)
                     mpp.plot(avg_x, (da_m*avg_x + da_n), 'k--')  # best linear fit for THR (black dashed line)
                     mpp.plot(thr_x, avgfgf_y[thr_i], 'ro')  # THR (red dot)
                     mpp.plot(avgfgfmax_x, avgfgfmax_y, 'bo')  # derivative maximum (blue dot)
@@ -805,34 +807,32 @@ for ATFFILE in ATFFILES:  # iterate through files
                     # data summary
                     sys.stdout.write(">> SAVING... ")
                     sys.stdout.flush()
-                    avg_file = os.path.join(WORKDIR, name + "_" + timestamp + "_avg.dat")
-                    uheader = "" +\
+                    avg_file = os.path.join(WORKDIR, name + "_" + TIMESTAMP + "_avg.dat")
+                    UHEADER = "" +\
                         "Analysis start time: " + 4*"\t" + str(tmp_start) + " ms\n" + \
                         "Analysis stop time:" + 4*"\t" + str(tmp_stop) + " ms\n" + \
-                        "Upper limit for maxima:" + 3*"\t" + str(ap_max) + " mV\n" + \
-                        "Lower limit for maxima:" + 3*"\t" + str(ap_min) + " mV\n" + \
-                        "Upper limit for minima:" + 3*"\t" + str(mdp_max) + " mV\n" + \
-                        "Lower limit for minima:" + 3*"\t" + str(mdp_min) + " mV\n" + \
-                        "Maximum peak half width:" + 3*"\t" + str(ap_hwd) + " ms\n" + \
-                        "Minimum peak amplitude:" + 3*"\t" + str(ap_amp) + " mV\n" + \
+                        "Upper limit for maxima:" + 3*"\t" + str(AP_MAX) + " mV\n" + \
+                        "Lower limit for maxima:" + 3*"\t" + str(AP_MIN) + " mV\n" + \
+                        "Upper limit for minima:" + 3*"\t" + str(MDP_MAX) + " mV\n" + \
+                        "Lower limit for minima:" + 3*"\t" + str(MDP_MIN) + " mV\n" + \
+                        "Maximum peak half width:" + 3*"\t" + str(AP_HWD) + " ms\n" + \
+                        "Minimum peak amplitude:" + 3*"\t" + str(AP_AMP) + " mV\n" + \
                         "Running average window size:" + 2*"\t" + str(runavg) + "\n" + \
-                        "Window multiplier for derivative:" + "\t" + str(wm_der) + "\n" + \
-                        "Window multiplier for maxima:" + 2*"\t" + str(wm_max) + "\n" + \
-                        "Window multiplier for minima:" + 2*"\t" + str(wm_min) + "\n" + \
+                        "Window multiplier for derivative:" + "\t" + str(WM_DER) + "\n" + \
+                        "Window multiplier for maxima:" + 2*"\t" + str(WM_MAX) + "\n" + \
+                        "Window multiplier for minima:" + 2*"\t" + str(WM_MIN) + "\n" + \
                         "Time (ms)" + "\t" + "Averaged signal (mV)" + "\t" + "Filtered average (mV)"
-                    np.savetxt(avg_file, np.column_stack((avg_x, avg_y, avgf_y)), fmt='%e', delimiter='\t', header=uheader)
+                    np.savetxt(avg_file, np.column_stack((avg_x, avg_y, avgf_y)), fmt='%e', delimiter='\t', header=UHEADER)
                     mpp.tight_layout()
                     mpp.savefig(pdf_file, format='pdf', dpi=600)
                     sum_file = os.path.join(WORKDIR, "ParamAP.log")
-                    newfile = not bool(os.path.exists(sum_file))
+                    NEWFILE = not bool(os.path.exists(sum_file))
                     with open(sum_file, 'a') as targetfile:  # append file
-                        if newfile:  # write header
-                            targetfile.write(
-                                "{0:s}\t{1:s}\t{2:s}\t{3:s}\t{4:s}\t{5:s}\t{6:s}\t{7:s}\t{8:s}\t{9:s}\t{10:s}\t{11:s}\t{12:s}\t{13:s}\t{14:s}\t{15:s}\t{16:s}\t{17:s}\t{18:s}\t{19:s}\t{20:s}\t{21:s}".format(
-                                    "File ( )", "Start (ms)", "Stop (ms)", "APs (#)", "FR (AP/min)", "CL (ms)", "DD (ms)", "EDD (ms)", "LDD (ms)", "APD (ms)", "LAPD (ms)", "APD50 (ms)", "APD90 (ms)", "MDP1 (mV)", "MDP2 (mV)", "THR (mV)", "PP (mV)", "APA (mV)", "DDR (mV/ms)", "MUV (mV/ms)", "TRR (mV/ms)", "MRR (mV/ms)") + "\n")
-                        targetfile.write(
-                            "{0:s}\t{1:4G}\t{2:4G}\t{3:4G}\t{4:4G}\t{5:4G}\t{6:4G}\t{7:4G}\t{8:4G}\t{9:4G}\t{10:4G}\t{11:4G}\t{12:4G}\t{13:4G}\t{14:4G}\t{15:4G}\t{16:4G}\t{17:4G}\t{18:4G}\t{19:4G}\t{20:4G}\t{21:4G}".format(
-                                name, tmp_start, tmp_stop, rawfmax_y.size, frate, cl, dd, edd, ldd, apd, lapd, apd50, apd90, mdp1, mdp2, thr, pp, apa, ddr, muv, trr, mrr) + "\n")
+                        if NEWFILE:  # write header
+                            targetfile.write("{0:s}\t{1:s}\t{2:s}\t{3:s}\t{4:s}\t{5:s}\t{6:s}\t{7:s}\t{8:s}\t{9:s}\t{10:s}\t{11:s}\t{12:s}\t{13:s}\t{14:s}\t{15:s}\t{16:s}\t{17:s}\t{18:s}\t{19:s}\t{20:s}\t{21:s}".format(
+                                             "File ( )", "Start (ms)", "Stop (ms)", "APs (#)", "FR (AP/min)", "CL (ms)", "DD (ms)", "EDD (ms)", "LDD (ms)", "APD (ms)", "LAPD (ms)", "APD50 (ms)", "APD90 (ms)", "MDP1 (mV)", "MDP2 (mV)", "THR (mV)", "PP (mV)", "APA (mV)", "DDR (mV/ms)", "MUV (mV/ms)", "TRR (mV/ms)", "MRR (mV/ms)") + "\n")
+                        targetfile.write("{0:s}\t{1:4G}\t{2:4G}\t{3:4G}\t{4:4G}\t{5:4G}\t{6:4G}\t{7:4G}\t{8:4G}\t{9:4G}\t{10:4G}\t{11:4G}\t{12:4G}\t{13:4G}\t{14:4G}\t{15:4G}\t{16:4G}\t{17:4G}\t{18:4G}\t{19:4G}\t{20:4G}\t{21:4G}".format(
+                                          name, tmp_start, tmp_stop, rawfmax_y.size, frate, cl, dd, edd, ldd, apd, lapd, apd50, apd90, mdp1, mdp2, thr, pp, apa, ddr, muv, trr, mrr) + "\n")
                         targetfile.flush()
                     sys.stdout.write(8*"\t" + "   [OK]\n")
                     sys.stdout.flush()
@@ -856,14 +856,14 @@ for ATFFILE in ATFFILES:  # iterate through files
                 print("\r   ## Run skipped. Canceled by user.")
             if SERIES:  # check for next frame
                 if tmp_stop + AVG_FRAME <= avg_stop:
-                    segment += 1.0
-                    tmp_start = avg_start + segment*AVG_FRAME  # prepare next frame for preview
+                    SEGMENT += 1.0
+                    tmp_start = avg_start + SEGMENT*AVG_FRAME  # prepare next frame for preview
                     tmp_stop = tmp_start + AVG_FRAME
                     raw_i = np.argwhere((RAW_XY[0] >= tmp_start) & (RAW_XY[0] <= tmp_stop)).ravel()
                     raw_x = RAW_XY[0][raw_i[0]:raw_i[-1]+1]
                     raw_y = RAW_XY[1][raw_i[0]:raw_i[-1]+1]
                     print()
-                    print("RUN:\t" + str(int(segment + 1)) + "/" + str(math.floor((avg_stop-avg_start)/AVG_FRAME)))
+                    print("RUN:\t" + str(int(SEGMENT + 1)) + "/" + str(math.floor((avg_stop-avg_start)/AVG_FRAME)))
                     print()
                 else:  # not enough data left in file
                     break
@@ -872,8 +872,8 @@ for ATFFILE in ATFFILES:  # iterate through files
 
         if not AUTORUN:  # check for next file
             print()
-            nextfile = askboolean("Continue with next file?", True)
-            if nextfile:
+            NEXTFILE = askboolean("Continue with next file?", True)
+            if NEXTFILE:
                 break
             else:  # re-run current file
                 raw_x = RAW_XY[0]  # recover original rawdata
