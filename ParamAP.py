@@ -645,21 +645,21 @@ for ATFFILE in ATFFILES:  # iterate through files
                     # determine "AP duration 30: Time interval at 30% of maximum repolarization" (APD30) (ms)
                     apd30_l = (pp - 0.30*apa)  # threshold value
                     apd30_i = functools.reduce(np.intersect1d, (np.argwhere(avgf_y > apd30_l), np.argwhere(avg_x >= mdp1_x), np.argwhere(avg_x <= mdp2_x)))
-                    apd30_x = (avg_x[apd30_i[0]-1], avg_x[apd30_i[-1]+1])  # equal or smaller than apd30_l
+                    apd30_x = (avg_x[apd30_i[0]-1], avg_x[apd30_i[-1]+1])  # equal to or smaller than apd30_l
                     apd30_y = (avgf_y[apd30_i[0]-1], avgf_y[apd30_i[-1]+1])
                     apd30 = float(apd30_x[-1] - apd30_x[0])
 
                     # determine "AP duration 50: Time interval at 50% of maximum repolarization" (APD50) (ms)
                     apd50_l = (pp - 0.50*apa)  # threshold value
                     apd50_i = functools.reduce(np.intersect1d, (np.argwhere(avgf_y > apd50_l), np.argwhere(avg_x >= mdp1_x), np.argwhere(avg_x <= mdp2_x)))
-                    apd50_x = (avg_x[apd50_i[0]-1], avg_x[apd50_i[-1]+1])  # equal or smaller than apd50_l
+                    apd50_x = (avg_x[apd50_i[0]-1], avg_x[apd50_i[-1]+1])  # equal to or smaller than apd50_l
                     apd50_y = (avgf_y[apd50_i[0]-1], avgf_y[apd50_i[-1]+1])
                     apd50 = float(apd50_x[-1] - apd50_x[0])
 
                     # determine "AP duration 90: Time interval at 90% of maximum repolarization" (APD90) (ms)
                     apd90_l = pp - 0.90*apa
                     apd90_i = functools.reduce(np.intersect1d, (np.argwhere(avgf_y > apd90_l), np.argwhere(avg_x >= mdp1_x), np.argwhere(avg_x <= mdp2_x)))
-                    apd90_x = (avg_x[apd90_i[0]-1], avg_x[apd90_i[-1]+1])  # equal or smaller than apd90_l
+                    apd90_x = (avg_x[apd90_i[0]-1], avg_x[apd90_i[-1]+1])  # equal to or smaller than apd90_l
                     apd90_y = (avgf_y[apd90_i[0]-1], avgf_y[apd90_i[-1]+1])
                     apd90 = float(apd90_x[-1] - apd90_x[0])
 
@@ -684,15 +684,16 @@ for ATFFILE in ATFFILES:  # iterate through files
                     tmpavg = int(round(wm_min*runavg)) if int(round(wm_min*runavg)) % 2 else int(round(wm_min*runavg))+1
                     avgfgfmin_ii = functools.reduce(np.intersect1d, (sp_sig.argrelmin(avgfgf_y, order=tmpavg), np.argwhere(avg_x >= avgfmax_x), np.argwhere(avg_x <= mdp2_x)))
                     avgfgfmin_i = getneighbors(np.asarray([apd90_i[-1]+1]), avgfgfmin_ii, avg_x, avgfgf_y)[0]  # mrr or trr
+                    # determine "Transient repolarization rate: Second minimum of derivative between PP and MDP2 after PP, if distinct from MRR" (TRR) (mV/ms)
                     avgfgfmin_i = np.append(avgfgfmin_i, getneighbors(np.asarray([avgfgfmax_i]), avgfgfmin_ii, avg_x, avgfgf_y)[1])  # trr only
-                    if avgfgfmin_i[0] == avgfgfmin_i[1]:  # no trr
-                        trr = 0.0
-                    else:
-                        # determine "Transient repolarization rate: Second minimum of derivative between PP and MDP2 after PP, if distinct from MRR" (TRR) (mV/ms)
-                        trr = float(avgfgf_y[avgfgfmin_i][1])
+
                     avgfgfmin_x = avg_x[avgfgfmin_i]
                     avgfgfmin_y = avgfgf_y[avgfgfmin_i]
                     mrr = float(avgfgf_y[avgfgfmin_i][0])
+                    if avgfgfmin_i[0] == avgfgfmin_i[1]:  # no trr
+                        trr = False
+                    else:
+                        trr = float(avgfgf_y[avgfgfmin_i][1])  # True
 
                     # approximate diastolic duration in filtered derivative
                     da_i, da_x, da_y, da_m, da_n, da_r = getbestlinearfit(avg_x, avgfgf_y, mdp1_x, apd90_x[0], 10, 90, 1, 40)  # get a baseline for the derivative before exceeding the threshold
@@ -733,8 +734,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp.plot([mdp2_x, mdp2_x], [mdp2_y, 0.0], 'k:')  # MDP2 indicator (black dotted line)
                     mpp.plot([avgfgfmax_x, avgfgfmax_x], [mdp2_y, avgf_y[avgfgfmax_i]], 'k:')  # MUV indicator (black dotted line)
                     mpp.plot([avgfgfmin_x[0], avgfgfmin_x[0]], [mdp2_y, avgf_y[avgfgfmin_i[0]]], 'k:')  # MRR indicator (black dotted line)
-                    if trr:
-                        mpp.plot([avgfgfmin_x[1], avgfgfmin_x[1]], [mdp2_y, avgf_y[avgfgfmin_i[1]]], 'k:')  # TRR indicator (black dotted line)
+
                     mpp.plot([edd_x[-1], edd_x[-1]], [mdp2_y, 0.0], 'k:')  # EDD/LDD separator (black dashed line)
                     mpp.plot([thr_x, thr_x], [thr_y, 0.0], 'k:')  # DD/APD upper separator (black dotted line)
                     mpp.plot([thr_x, thr_x], [mdp2_y, thr_y], 'k:')  # DD/APD lower separator (black dotted line)
@@ -749,7 +749,8 @@ for ATFFILE in ATFFILES:  # iterate through files
                     mpp.plot(avgfgfmax_x, avgf_y[avgfgfmax_i], 'wo')  # MUV (white dot)
                     mpp.plot(avgfgfmin_x[0], avgf_y[avgfgfmin_i[0]], 'wo')  # MRR (white dot)
                     if trr:
-                        mpp.plot(avgfgfmin_x[1], avgf_y[avgfgfmin_i[1]], 'wo')  # TRR (dot)
+                        mpp.plot([avgfgfmin_x[1], avgfgfmin_x[1]], [mdp2_y, avgf_y[avgfgfmin_i[1]]], 'k:')  # TRR indicator (black dotted line)
+                        mpp.plot(avgfgfmin_x[1], avgf_y[avgfgfmin_i[1]], 'wo')  # TRR (white dot)
                     mpp.plot(avgfmax_x, pp_y, 'bo')  # PP (blue dot)
                     mpp.plot(avgfmin_x, avgfmin_y, 'go')  # MDP1, MDP2 (green dots)
                     mpp.figtext(0.12, 0.91, "{0:<s} {1:<.4G}".format("APs (#):", rawfmax_y.size), ha='left', va='center')
