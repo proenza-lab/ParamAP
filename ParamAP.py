@@ -3,7 +3,7 @@
 
 '''
 ParamAP.py (parametrization of sinoatrial myocyte action potentials)
-Copyright (C) 2019 Christian Rickert <christian.rickert@ucdenver.edu>
+Copyright (C) 2021 Christian Rickert <christian.rickert@cuanschutz.edu>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -230,25 +230,30 @@ def readfile(inputfile='name'):
         return inp_xy, inpunits, inpux, inpuy
 
 
+def toggle_mpp_imode(activate=True):
+    """Toggle matplotlib interactive mode on or off."""
+    inter_active = mpp.isinteractive()
+    if activate and not inter_active:
+        mpp.ion()  # turn interactive mode on
+    elif not activate and inter_active:
+        mpp.ioff()  # turn interactive mode off
+
+
 # main routine
 
-AUTHOR = "Copyright (C) 2019 Christian Rickert"
+AUTHOR = "Copyright (C) 2021 Christian Rickert"
 SEPARBOLD = 79*'='
 SEPARNORM = 79*'-'
 SOFTWARE = "ParamAP"
-VERSION = "version 1.2,"  # (2019-02-11)
+VERSION = "version 1.3,"  # (2021-05-28)
 WORKDIR = SOFTWARE  # working directory for parameterization
 print('{0:^79}'.format(SEPARBOLD) + os.linesep)
 GREETER = '{0:<{w0}}{1:<{w1}}{2:<{w2}}'.format(SOFTWARE, VERSION, AUTHOR, w0=len(SOFTWARE)+1, w1=len(VERSION)+1, w2=len(AUTHOR)+1)
-INTERMEDIATELINE1 = '{0:}'.format("Laboratory of Cathy Proenza")
-INTERMEDIATELINE2 = '{0:}'.format("Department of Physiology & Biophysics")
-INTERMEDIATELINE3 = '{0:}'.format("University of Colorado, Anschutz Medical Campus")
+INTERMEDIATELINE = '{0:}'.format("University of Colorado, Anschutz Medical Campus")
 DISCLAIMER = "ParamAP is distributed in the hope that it will be useful, but it comes without\nany guarantee or warranty.  This program is free software; you can redistribute\nit and/or modify it under the terms of the GNU General Public License:"
 URL = "https://www.gnu.org/licenses/gpl-2.0.en.html"
 print('{0:^79}'.format(GREETER) + os.linesep)
-print('{0:^79}'.format(INTERMEDIATELINE1))
-print('{0:^79}'.format(INTERMEDIATELINE2))
-print('{0:^79}'.format(INTERMEDIATELINE3) + os.linesep)
+print('{0:^79}'.format(INTERMEDIATELINE) + os.linesep)
 print('{0:^79}'.format(DISCLAIMER) + os.linesep)
 print('{0:^79}'.format(URL) + os.linesep)
 print('{0:^79}'.format(SEPARBOLD) + os.linesep)
@@ -334,6 +339,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                 sys.stdout.flush()
 
                 if not AUTORUN:
+                    toggle_mpp_imode(activate=True)
                     mpp.show()
 
                 # set parameters for averaging
@@ -553,6 +559,7 @@ for ATFFILE in ATFFILES:  # iterate through files
                 sys.stdout.write(8*"\t" + "   [OK]\n")
                 sys.stdout.flush()
                 if not AUTORUN:
+                    toggle_mpp_imode(activate=False)
                     mpp.show()
                 mpp.clf()
 
